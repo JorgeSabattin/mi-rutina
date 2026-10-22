@@ -453,6 +453,72 @@ function figuraEjercicio(nombre, grupo, clase){
 }
 
 // ============================================================
+// ANIMACIÓN DE LAS FIGURAS: cada ejercicio alterna entre su pose del
+// dibujo (A) y una segunda pose (B). Índice = posición del trazo en FIG_DATA.
+// Los ejercicios isométricos (plancha, elongación) quedan quietos.
+// ============================================================
+const FIG_B = {
+  pie:          { 3: [[17,18],[24,16],[31,18]] },
+  sentadilla:   { 0: [[6,11],[42,11]], 1: [4,6], 2: [40,6], 3: [24,4], 4: [[24,8],[24,22]],
+                  5: [[17,10],[19,15],[24,12],[29,15],[31,10]], 6: [[15,43],[19,32],[24,22],[29,32],[33,43]] },
+  zancada:      { 0: [22,4], 1: [[22,8],[22,22]], 2: [[32,43],[30,33],[22,22],[19,32],[17,42],[10,43]], 3: [[22,10],[24,20]], 4: [21,20] },
+  step:         { 1: [24,5], 2: [[24,9],[24,21]], 3: [[31,34],[29,27],[24,21],[27,27],[28,34]], 4: [[24,12],[22,20]], 5: [19,20] },
+  prensa:       { 2: [[39,18],[46,38]], 5: [[16,36],[29,27],[41,28]] },
+  ext_cuad:     { 2: [[16,12],[16,30],[29,30],[30,43]], 4: [30,40] },
+  bisagra:      { 0: [21,4], 1: [[21,8],[20,26],[23,34],[24,43]], 2: [[21,11],[23,25]], 3: [23,28] },
+  puente:       { 3: [[12,26],[25,32],[35,30],[36,43]], 4: [25,27] },
+  curl_femoral: { 4: [[11,30],[27,30],[37,30],[45,28]], 6: [45,25] },
+  gemelos:      { 1: [24,4], 2: [[24,8],[24,24],[24,34],[28,40]], 3: [[24,11],[22,23]] },
+  press_banca:  { 5: [[15,29],[15,24]], 6: [15,21] },
+  flexion:      { 1: [9,35], 2: [[13,38],[43,41]], 3: [[15,39],[15,43]] },
+  fondos:       { 3: [24,14], 4: [[24,18],[24,34],[22,42],[28,46]], 5: [[24,21],[15,20],[18,24]] },
+  jalon:        { 0: [[8,16],[40,16]], 3: [[14,17],[15,25],[24,20],[33,25],[34,17]] },
+  remo:         { 1: [[33,26],[41,28]], 5: [[17,17],[26,22],[33,26]] },
+  press_hombro: { 3: [[14,15],[13,25],[24,19],[35,25],[34,15]], 4: [10,12], 5: [30,12] },
+  elev_lateral: { 3: [[21,29],[24,17],[27,29]], 4: [19,29], 5: [25,29] },
+  curl:         { 3: [[18,27],[19,24],[24,16],[31,13]], 4: [16,26], 5: [29,10] },
+  triceps:      { 0: [[30,4],[28,20]], 5: [[19,15],[21,25],[28,20]] },
+  crunch:       { 1: [7,38], 2: [[11,40],[27,42],[33,31],[40,42]], 3: [[12,40],[6,34]] },
+  bicho:        { 3: [[15,40],[4,32]], 4: [[29,40],[33,34],[45,36]] },
+  superman:     { 1: [10,38], 2: [[13,41],[32,41],[44,41]], 3: [[14,41],[3,41]] },
+  cuadrupedia:  { 5: [[11,28],[9,43]], 6: [[29,28],[31,43]] },
+  patada:       { 3: [[25,28],[28,42]] },
+  bicicleta:    { 6: [[19,22],[28,20],[36,27]] },
+  correr:       { 3: [[35,17],[31,22],[26,16],[20,21],[17,17]], 4: [[33,34],[27,35],[23,27],[16,33],[18,42]] },
+  caminar:      { 2: [[19,42],[23,27],[27,42]] },
+  saltar:       { 3: [[19,26],[24,16],[29,26]], 4: [[21,43],[24,28],[27,43]] }
+};
+const ANIMAR_FIG = !(window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+function figuraAnimada(nombre, grupo, clase){
+  const k = claveFigura(nombre, grupo);
+  const base = FIG_DATA[k] || FIG_DATA.pie, pose = ANIMAR_FIG ? (FIG_B[k] || {}) : {};
+  const T = ' dur="2.4s" repeatCount="indefinite" calcMode="spline" keyTimes="0;.5;1" keySplines=".45 0 .55 1;.45 0 .55 1"';
+  const pts = l => l.map(p => p.join(",")).join(" ");
+  const anim = (attr, a, b) => '<animate attributeName="' + attr + '" values="' + a + ';' + b + ';' + a + '"' + T + '/>';
+  const partes = base.map((e, i) => {
+    const b = pose[i];
+    if(e[0] === "h"){
+      return '<circle cx="' + e[1] + '" cy="' + e[2] + '" r="3.6" fill="currentColor">' + (b ? anim("cx", e[1], b[0]) + anim("cy", e[2], b[1]) : '') + '</circle>';
+    }
+    if(e[0] === "l" || e[0] === "t"){
+      return '<polyline points="' + pts(e[1]) + '" fill="none" stroke="currentColor" stroke-width="' + (e[0] === "l" ? 3.2 : 1.6) +
+        '" stroke-linecap="round" stroke-linejoin="round"' + (e[0] === "t" ? ' opacity=".5"' : '') + '>' +
+        (b && b.length === e[1].length ? anim("points", pts(e[1]), pts(b)) : '') + '</polyline>';
+    }
+    if(e[0] === "o" || e[0] === "c"){
+      const extra = e[0] === "o" ? ' fill="none" stroke="currentColor" stroke-width="1.6" opacity=".5"' : ' fill="currentColor" opacity=".65"';
+      return '<circle cx="' + e[1] + '" cy="' + e[2] + '" r="' + e[3] + '"' + extra + '>' + (b ? anim("cx", e[1], b[0]) + anim("cy", e[2], b[1]) : '') + '</circle>';
+    }
+    if(e[0] === "r"){
+      return '<rect x="' + e[1] + '" y="' + e[2] + '" width="' + e[3] + '" height="' + e[4] + '" rx="1" fill="currentColor" opacity=".65">' +
+        (b ? anim("x", e[1], b[0]) + anim("y", e[2], b[1]) : '') + '</rect>';
+    }
+    return "";
+  }).join("");
+  return '<svg class="' + (clase || "fig-ej") + '" viewBox="0 0 48 48" aria-hidden="true">' + partes + '</svg>';
+}
+
+// ============================================================
 // CAMPOS DE LA EVALUACIÓN (los mismos de la app del gimnasio)
 // ============================================================
 const EVAL_GRUPOS = [
@@ -673,7 +739,7 @@ function renderSesion(){
     if(ej.kg) pills.push('<span class="sv-pill carga">' + escapeHtml(ej.kg) + ' kg</span>');
     if(ej.descanso && ej.descanso !== "—") pills.push('<span class="sv-pill">Descanso ' + escapeHtml(ej.descanso) + '</span>');
     return '<div class="sv-ej' + (hecho ? ' hecho' : '') + '">' +
-      '<div class="sv-fig">' + figuraEjercicio(ej.nombre) + '<div class="sv-num">' + (e + 1) + '</div></div>' +
+      '<div class="sv-fig">' + figuraAnimada(ej.nombre) + '<div class="sv-num">' + (e + 1) + '</div></div>' +
       '<div>' +
         '<div class="sv-nombre">' + escapeHtml(ej.nombre || "(sin nombre)") + '</div>' +
         (pills.length ? '<div class="sv-pills">' + pills.join("") + '</div>' : '') +
