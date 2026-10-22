@@ -1,0 +1,965 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#12615A">
+<meta name="description" content="Tu rutina, evaluaciones y registro de sesiones del gimnasio.">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Mi rutina">
+<title>Mi rutina · Gimnasio</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Public+Sans:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#F6F2EA; --bg2:#EFE8D9; --surface:#FFFEFC; --surface2:#FBF7EF; --border:#E2D9C4;
+    --ink:#2B2620; --muted:#7A7267; --faint:#A79C8C; --brass:#A9803F; --brass-d:#8A672F;
+    --teal:#12615A; --teal-d:#0B4842; --teal-l:#E4EFEC; --red:#9C3B2E; --red-l:#F7E9E5;
+    --radius:14px; --radius-sm:9px;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent}
+  html,body{margin:0}
+  body{
+    background:var(--bg); color:var(--ink); font-family:'Public Sans',sans-serif; font-size:15px; line-height:1.5;
+    background-image:radial-gradient(circle at 1px 1px, rgba(169,128,63,.10) 1px, transparent 0); background-size:22px 22px;
+    min-height:100vh; overscroll-behavior-y:none;
+  }
+  .app{max-width:560px; margin:0 auto; padding-bottom:calc(40px + env(safe-area-inset-bottom))}
+  [hidden]{display:none !important}
+
+  label{display:block; font-size:12px; font-weight:600; color:var(--muted); margin-bottom:5px; text-transform:uppercase; letter-spacing:.04em}
+  input[type=text], input[type=password]{
+    width:100%; padding:13px 14px; border:1px solid var(--border); border-radius:var(--radius-sm);
+    background:var(--surface2); font-family:'Space Mono',monospace; font-size:17px; color:var(--ink); outline:none; transition:.15s;
+  }
+  input:focus{border-color:var(--teal); background:#fff}
+  .field{margin-bottom:14px}
+  .btn{display:inline-flex; align-items:center; justify-content:center; gap:8px; padding:12px 18px; border-radius:var(--radius-sm);
+    border:1px solid transparent; font:600 14px 'Public Sans',sans-serif; cursor:pointer; transition:.15s; text-decoration:none}
+  .btn-primary{background:var(--teal); color:#fff}
+  .btn-primary:active{background:var(--teal-d)}
+  .btn-primary:disabled{background:#c9c2b4; cursor:not-allowed}
+  .btn-ghost{background:transparent; border-color:var(--border); color:var(--ink)}
+  .btn-block{width:100%}
+  .link{background:none; border:0; padding:0; color:var(--teal-d); font:600 14px 'Public Sans',sans-serif; text-decoration:underline; text-underline-offset:3px; cursor:pointer}
+  .btn:focus-visible, .link:focus-visible, .chip:focus-visible, .sv-tab:focus-visible, .sv-check:focus-visible, .sv-salir:focus-visible, .gym-op:focus-visible{outline:3px solid var(--brass); outline-offset:2px}
+
+  .toast{position:fixed; bottom:calc(22px + env(safe-area-inset-bottom)); left:50%; transform:translateX(-50%) translateY(20px); max-width:92vw;
+    background:var(--ink); color:#fff; padding:11px 18px; border-radius:10px; font-size:14px; opacity:0; pointer-events:none; transition:.22s; z-index:500;
+    box-shadow:0 8px 24px rgba(0,0,0,.2); text-align:center}
+  .toast.show{opacity:1; transform:translateX(-50%) translateY(0)}
+  .toast.err{background:var(--red)}
+
+  /* ---------- Pantallas de inicio ---------- */
+  .pantalla{padding:calc(44px + env(safe-area-inset-top)) 22px 30px}
+  .marca{font-family:'Space Mono',monospace; font-size:11px; letter-spacing:.12em; text-transform:uppercase; color:var(--brass-d)}
+  .pantalla h1{font-family:'Fraunces',serif; font-size:34px; margin:6px 0 4px; line-height:1.1}
+  .sub{color:var(--muted); margin:0 0 22px; font-size:14.5px}
+  .logo{width:64px; height:64px; border-radius:18px; margin-bottom:18px; box-shadow:0 6px 18px rgba(11,72,66,.25)}
+  .gym-op{display:flex; align-items:center; gap:14px; width:100%; text-align:left; background:var(--surface); border:1px solid var(--border);
+    border-radius:var(--radius); padding:16px; margin-bottom:12px; cursor:pointer; font-family:inherit; color:var(--ink)}
+  .gym-op:active{border-color:var(--teal)}
+  .gym-op .ini{flex:0 0 auto; width:46px; height:46px; border-radius:12px; background:var(--teal-l); color:var(--teal-d);
+    display:grid; place-items:center; font:700 15px 'Space Mono',monospace}
+  .gym-op .n{font-family:'Fraunces',serif; font-weight:600; font-size:17px; line-height:1.25}
+  .gym-op .d{font-size:13px; color:var(--muted)}
+  .gym-op[disabled]{opacity:.55; cursor:default}
+  .recordar{display:flex; gap:10px; align-items:center; text-transform:none; letter-spacing:0; font-size:14px; color:var(--ink); font-weight:500; margin:6px 0 18px}
+  .recordar input{width:20px; height:20px; accent-color:var(--teal)}
+  .pie-login{display:flex; justify-content:space-between; align-items:center; margin-top:22px; gap:12px; flex-wrap:wrap}
+  .ayuda{font-size:13px; color:var(--muted); margin-top:18px; line-height:1.5}
+
+  /* ---------- Instalar ---------- */
+  .instalar{display:flex; align-items:center; gap:12px; background:var(--surface); border:1px solid var(--border); border-radius:var(--radius);
+    padding:12px 14px; margin:0 0 14px}
+  .instalar img{width:40px; height:40px; border-radius:10px; flex:0 0 auto}
+  .instalar .t{font-weight:700; font-size:14px}
+  .instalar .d{font-size:12.5px; color:var(--muted)}
+  .instalar .acc{margin-left:auto; display:flex; gap:6px; align-items:center}
+  .instalar .x{background:none; border:0; color:var(--faint); font-size:20px; padding:4px 6px; cursor:pointer}
+  .hoja{position:fixed; inset:0; background:rgba(30,26,20,.55); z-index:400; display:flex; align-items:flex-end}
+  .hoja .caja{background:var(--surface); width:100%; max-width:560px; margin:0 auto; border-radius:20px 20px 0 0;
+    padding:22px 22px calc(26px + env(safe-area-inset-bottom))}
+  .hoja h3{font-family:'Fraunces',serif; font-size:21px; margin:0 0 12px}
+  .hoja ol{margin:0 0 18px; padding-left:22px; line-height:1.7; font-size:15px}
+  .ico-comp{display:inline-block; vertical-align:-3px; width:18px; height:18px}
+
+  /* ---------- Sesión iniciada ---------- */
+  .sv-top{position:sticky; top:0; z-index:20; background:var(--teal); color:#fff; padding:calc(14px + env(safe-area-inset-top)) 18px 14px;
+    display:flex; justify-content:space-between; align-items:center; gap:12px}
+  .sv-gym{font-family:'Space Mono',monospace; font-size:10.5px; letter-spacing:.1em; text-transform:uppercase; opacity:.8}
+  .sv-hola{font-family:'Fraunces',serif; font-size:21px; font-weight:600; line-height:1.2}
+  .sv-plan{font-size:12px; opacity:.85; margin-top:2px}
+  .sv-salir{background:transparent; border:1px solid rgba(255,255,255,.5); color:#fff; border-radius:20px; padding:7px 14px; font:600 13px 'Public Sans',sans-serif; cursor:pointer; flex:0 0 auto}
+  .offline{background:#FBEBD9; color:#7A4A12; font-size:13px; font-weight:600; padding:8px 18px; text-align:center}
+  .sv-cont{padding:14px 14px 0}
+  .sv-tabs{display:grid; gap:4px; background:var(--bg2); border-radius:12px; padding:4px; margin:0 0 14px}
+  .sv-tab{border:0; background:transparent; border-radius:9px; padding:11px 4px; font:700 13px 'Public Sans',sans-serif; color:var(--muted); cursor:pointer}
+  .sv-tab[aria-selected="true"]{background:var(--surface); color:var(--teal-d); box-shadow:0 1px 3px rgba(0,0,0,.08)}
+  .aviso-rpe{background:var(--red-l); border:1px solid #e6cec7; color:var(--red); border-radius:var(--radius-sm); padding:10px 14px; font-size:13.5px; font-weight:600; margin-bottom:12px}
+
+  .chips{display:flex; gap:8px; overflow-x:auto; padding:4px 0 10px; scrollbar-width:none}
+  .chips::-webkit-scrollbar{display:none}
+  .chip{flex:0 0 auto; border:1px solid var(--border); background:var(--surface); border-radius:20px; padding:10px 14px;
+    font:600 13.5px 'Public Sans',sans-serif; color:var(--ink); cursor:pointer}
+  .chip.activo{background:var(--teal); border-color:var(--teal); color:#fff}
+  .chip .hoy{color:var(--brass); font-weight:700; margin-left:4px}
+  .chip.activo .hoy{color:#F3D9A6}
+  .sv-resumen{font-size:13px; color:var(--muted); margin:0 2px 10px}
+  .sv-resumen strong{color:var(--teal-d)}
+  .sv-ses-titulo{font-family:'Fraunces',serif; font-weight:600; font-size:19px; color:var(--ink); margin-bottom:2px}
+  .sv-ej{display:grid; grid-template-columns:58px 1fr 52px; gap:10px; align-items:start; background:var(--surface);
+    border:1px solid var(--border); border-radius:14px; padding:14px 12px; margin-bottom:10px; transition:background .15s, border-color .15s}
+  .sv-ej.hecho{background:var(--teal-l); border-color:#BFD9D4}
+  .sv-ej.hecho .sv-nombre{color:var(--teal-d)}
+  .sv-fig{position:relative; width:58px; height:58px; border-radius:12px; background:var(--bg2); color:var(--teal-d); display:grid; place-items:center}
+  .sv-fig .fig-ej{width:50px; height:50px}
+  .sv-num{position:absolute; top:-7px; left:-7px; width:22px; height:22px; border-radius:50%; display:grid; place-items:center;
+    font:700 11px 'Space Mono',monospace; color:var(--brass-d); background:var(--surface); border:1px solid var(--border)}
+  .sv-ej.hecho .sv-fig{background:#fff}
+  .sv-nombre{font-family:'Fraunces',serif; font-weight:600; font-size:17px; line-height:1.25}
+  .sv-pills{display:flex; flex-wrap:wrap; gap:6px; margin:8px 0 4px}
+  .sv-pill{background:var(--bg2); border-radius:8px; padding:4px 9px; font:600 12.5px 'Public Sans',sans-serif; color:var(--ink)}
+  .sv-pill.fuerte{background:var(--ink); color:#fff; font-family:'Space Mono',monospace; font-size:14px}
+  .sv-pill.carga{background:var(--brass); color:#fff; font-family:'Space Mono',monospace; font-size:14px}
+  .sv-nota{color:var(--muted); font-size:13px; margin-top:4px; line-height:1.4}
+  .sv-video{display:inline-block; margin-top:8px; font-weight:700; font-size:13px; color:var(--teal-d)}
+  .sv-check{width:48px; height:48px; border-radius:50%; border:2px solid var(--border); background:#fff; color:transparent;
+    font-size:22px; font-weight:700; cursor:pointer; align-self:center}
+  .sv-check[aria-pressed="true"]{background:var(--teal); border-color:var(--teal); color:#fff}
+  .sv-fin{margin:16px 0 8px; padding:15px; font-size:16px}
+  .sv-pie{text-align:center; color:var(--faint); font-size:12px; margin:6px 0 0}
+  .sv-vacio{background:var(--surface); border:1px dashed var(--border); border-radius:14px; padding:28px 18px; text-align:center; color:var(--muted); line-height:1.5}
+
+  .sv-hist-res{font-size:13.5px; color:var(--muted); margin:0 0 12px; line-height:1.5}
+  .sv-hist-res strong{color:var(--ink)}
+  details.sv-reg{background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:12px 14px; margin-bottom:8px}
+  details.sv-reg summary{cursor:pointer; list-style:none; display:flex; justify-content:space-between; gap:10px; align-items:baseline}
+  details.sv-reg summary::-webkit-details-marker{display:none}
+  details.sv-reg .f{font-weight:700; font-size:14.5px}
+  details.sv-reg .s{font-size:13px; color:var(--muted); margin-top:2px}
+  details.sv-reg .c{font-size:12.5px; font-weight:700; color:var(--teal-d); white-space:nowrap}
+  details.sv-reg .pend{font-size:11.5px; font-weight:700; color:#7A4A12; background:#FBEBD9; border-radius:20px; padding:1px 8px; margin-left:6px}
+  details.sv-reg ul{list-style:none; margin:10px 0 0; padding:10px 0 0; border-top:1px solid var(--border)}
+  details.sv-reg li{font-size:13.5px; padding:3px 0; display:flex; gap:8px}
+  details.sv-reg li .m{width:16px; flex:none; text-align:center; font-weight:700; color:var(--teal-d)}
+  details.sv-reg li.no{color:var(--muted)}
+  details.sv-reg li.no .m{color:var(--muted)}
+  details.sv-reg .com{font-size:13px; color:var(--muted); margin-top:8px; font-style:italic}
+
+  .sv-ev{background:var(--surface); border:1px solid var(--border); border-radius:14px; padding:16px; margin-bottom:12px}
+  .sv-ev h3{font-family:'Fraunces',serif; font-size:19px; margin:0 0 2px}
+  .sv-ev .sub{font-size:12.5px; color:var(--muted); margin-bottom:12px}
+  .sv-ev .fuente{font-size:12.5px; color:var(--muted); margin:-4px 0 10px}
+  .sv-datos{display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:12px}
+  .sv-dato{background:var(--bg2); border-radius:10px; padding:10px 12px}
+  .sv-dato .k{font-size:11px; text-transform:uppercase; letter-spacing:.06em; color:var(--muted); font-weight:700}
+  .sv-dato .v{font:700 20px 'Space Mono',monospace; color:var(--ink); margin-top:2px}
+  .sv-dato .delta{font-size:12px; font-weight:600; color:var(--muted)}
+  .sv-ev .sec{font-weight:700; font-size:13px; margin:12px 0 6px; color:var(--ink)}
+  .sv-ev table{width:100%; border-collapse:collapse; font-size:13px}
+  .sv-ev td, .sv-ev th{padding:7px 4px; border-bottom:1px solid var(--border); text-align:left}
+  .sv-ev th{font-size:11px; text-transform:uppercase; letter-spacing:.05em; color:var(--muted)}
+  .sv-ev td.n{font-family:'Space Mono',monospace; text-align:right; white-space:nowrap}
+  .sv-ev td.n .dl{color:var(--muted); font-weight:400; font-size:12px; margin-left:4px}
+  .sv-ev .notas{font-size:14px; line-height:1.45; color:var(--ink); white-space:pre-wrap}
+  .sv-informe{display:block; width:100%; border:1px solid var(--border); border-radius:10px; background:#fff; padding:0; cursor:pointer; overflow:hidden; margin-top:4px}
+  .sv-informe img{display:block; width:100%; min-height:80px}
+  .sv-informe img:not([src]){display:none}
+  .sv-informe span{display:block; padding:8px; font-weight:700; font-size:13px; color:var(--teal-d)}
+  details.sv-ev summary{cursor:pointer; font-weight:700; font-size:15px; list-style:none}
+  details.sv-ev summary::-webkit-details-marker{display:none}
+  details.sv-ev summary::after{content:"Ver"; float:right; font-size:12.5px; color:var(--teal-d)}
+  details.sv-ev[open] summary{margin-bottom:12px}
+  details.sv-ev[open] summary::after{content:"Ocultar"}
+
+  .visor{position:fixed; inset:0; background:rgba(30,26,20,.88); display:none; z-index:300; overflow:auto; padding:calc(60px + env(safe-area-inset-top)) 10px 24px}
+  .visor.abierto{display:block}
+  .visor img{display:block; max-width:min(1000px,100%); margin:0 auto; border-radius:8px; background:#fff}
+  .visor .cerrar{position:fixed; top:calc(12px + env(safe-area-inset-top)); right:14px; z-index:301; background:#fff}
+  .visor .cargando{color:#fff; text-align:center; padding:40px}
+
+  .qr-card{background:var(--surface); border:1px solid var(--border); border-radius:18px; padding:22px 18px; text-align:center}
+  .qr-card h3{font-family:'Fraunces',serif; font-size:21px; margin:0 0 4px}
+  .qr-card .sub{font-size:13px; color:var(--muted); margin-bottom:16px}
+  .qr-box{background:#fff; border-radius:14px; padding:12px; display:inline-block; min-width:240px; min-height:240px}
+  .qr-box svg{display:block; width:260px; height:260px; max-width:72vw; max-height:72vw}
+  .qr-barra{height:6px; background:var(--bg2); border-radius:4px; overflow:hidden; margin:16px auto 6px; max-width:280px}
+  .qr-barra i{display:block; height:100%; background:var(--teal); width:100%; transition:width 1s linear}
+  .qr-nota{font-size:12.5px; color:var(--muted)}
+  .qr-bloqueo{background:var(--red-l); color:var(--red); border:1px solid #e6cec7; border-radius:14px; padding:22px 16px; font-weight:600; line-height:1.5}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- ============ 1. ELEGIR GIMNASIO ============ -->
+  <section class="pantalla" id="vGym" hidden>
+    <img class="logo" src="icon-192.png" alt="">
+    <div class="marca">App del socio</div>
+    <h1>Mi rutina</h1>
+    <p class="sub">¿En qué gimnasio entrenas?</p>
+    <div id="listaGym"></div>
+  </section>
+
+  <!-- ============ 2. INGRESO ============ -->
+  <section class="pantalla" id="vLogin" hidden>
+    <div id="slotInstalarLogin"></div>
+    <div class="marca" id="lgMarca"></div>
+    <h1>Mi rutina</h1>
+    <p class="sub">Ingresa con tu RUT y la clave que te entregó tu profesor.</p>
+    <div class="field"><label for="ptRut">RUT</label><input type="text" id="ptRut" placeholder="12.345.678-9" autocomplete="username" inputmode="text" autocapitalize="characters"></div>
+    <div class="field"><label for="ptPin">Clave</label><input type="password" id="ptPin" inputmode="numeric" maxlength="6" autocomplete="current-password"></div>
+    <label class="recordar"><input type="checkbox" id="ptRecordar" checked> Recordarme en este teléfono</label>
+    <button class="btn btn-primary btn-block" id="btnEntrar" style="padding:15px; font-size:16px">Entrar</button>
+    <div class="pie-login">
+      <button class="link" id="btnCambiarGym" type="button">Cambiar de gimnasio</button>
+    </div>
+    <p class="ayuda">¿No tienes clave o la olvidaste? Pídela en la recepción del gimnasio.</p>
+  </section>
+
+  <!-- ============ 3. SESIÓN DEL SOCIO ============ -->
+  <section id="vSocio" hidden>
+    <div class="sv-top">
+      <div>
+        <div class="sv-gym" id="ptGym"></div>
+        <div class="sv-hola">Hola, <span id="ptNombre"></span></div>
+        <div class="sv-plan" id="ptPlanMeta"></div>
+      </div>
+      <button class="sv-salir" id="btnSalir">Salir</button>
+    </div>
+    <div class="offline" id="ptOffline" hidden>Sin conexión · mostrando tu última rutina guardada</div>
+    <div class="sv-cont">
+      <div id="slotInstalar"></div>
+      <div class="sv-tabs" role="tablist" aria-label="Secciones" id="ptTabs">
+        <button class="sv-tab" role="tab" id="tabQR" data-tab="qr" aria-selected="false" aria-controls="panQR">Mi QR</button>
+        <button class="sv-tab" role="tab" id="tabSesion" data-tab="sesion" aria-selected="true" aria-controls="panSesion">Mi sesión</button>
+        <button class="sv-tab" role="tab" id="tabEval" data-tab="eval" aria-selected="false" aria-controls="panEval">Evaluación</button>
+        <button class="sv-tab" role="tab" id="tabHist" data-tab="hist" aria-selected="false" aria-controls="panHist">Registro</button>
+      </div>
+      <div id="panSesion" role="tabpanel" aria-labelledby="tabSesion">
+        <div class="aviso-rpe" id="ptAviso" hidden>Controla la intensidad por esfuerzo percibido (RPE), no por frecuencia cardíaca ni pulsómetro.</div>
+        <div class="chips" id="ptChips" role="tablist" aria-label="Sesiones"></div>
+        <div class="sv-resumen" id="ptResumen"></div>
+        <div id="ptEjercicios"></div>
+        <button class="btn btn-primary btn-block sv-fin" id="btnRegistrar">Terminé esta sesión</button>
+        <p class="sv-pie" id="ptPie"></p>
+      </div>
+      <div id="panQR" role="tabpanel" aria-labelledby="tabQR" hidden></div>
+      <div id="panEval" role="tabpanel" aria-labelledby="tabEval" hidden></div>
+      <div id="panHist" role="tabpanel" aria-labelledby="tabHist" hidden></div>
+    </div>
+  </section>
+</div>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<div class="visor" id="visor" role="dialog" aria-modal="true" aria-label="Informe de evaluación">
+  <button class="btn btn-ghost cerrar" id="visorCerrar">Cerrar</button>
+  <div id="visorCont"></div>
+</div>
+<div class="hoja" id="hojaIOS" hidden>
+  <div class="caja">
+    <h3>Instala la app en tu iPhone</h3>
+    <ol>
+      <li>Toca el botón <strong>Compartir</strong>
+        <svg class="ico-comp" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="M8 7l4-4 4 4"/><path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7"/></svg>
+        en la barra de Safari.</li>
+      <li>Elige <strong>Agregar a inicio</strong>.</li>
+      <li>Toca <strong>Agregar</strong>. Verás el ícono «Mi rutina» en tu pantalla.</li>
+    </ol>
+    <button class="btn btn-primary btn-block" id="hojaCerrar">Entendido</button>
+  </div>
+</div>
+
+<script>
+// ============================================================
+// GIMNASIOS
+// Cada gimnasio tiene su propio Supabase. La app solo usa las funciones
+// del portal (socio_portal, socio_imagen, socio_registrar y, si hay
+// control de acceso, socio_qr): nunca ve datos de otros socios.
+// Un gimnasio sin URL/clave aparece como «Próximamente».
+// ============================================================
+const GIMNASIOS = {
+  hotel: {
+    nombre: "Hotel Plaza San Francisco",
+    sigla: "HP",
+    url: "https://wbrtxcthmktxprcybmrn.supabase.co",
+    clave: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6IndicnR4Y3RobWt0eHByY3libXJuIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTEyMzQyNzIsImV4cCI6MjEwNjgxMDI3Mn0.eWehgxTMFTrmQRyYQ0hmL2P11O0lzq3OV8r1xMT-5w4",
+    qr: false
+  },
+  unab: {
+    nombre: "Universidad Andrés Bello",
+    sigla: "UNAB",
+    url: "https://cqvlenhilzpqtjdzmpip.supabase.co",
+    clave: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNxdmxlbmhpbHpwcXRqZHptcGlwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTI2ODU4NzEsImV4cCI6MjEwODI2MTg3MX0.88vQ2dELQafAGXSUvtEbG_0c-IHAwrMHjXrIeHySFz8",
+    qr: true      // control de acceso con QR en la puerta
+  }
+};
+const QR_PREFIJO = "UNABGYM:";
+const QR_ROTA_S = 20;
+const PREF = "socio:";   // prefijo de todo lo que la app guarda en el teléfono
+
+// ============================================================
+// ALMACENAMIENTO LOCAL (tolerante a navegadores que lo bloquean)
+// ============================================================
+const MEM = {};
+const LOCAL = {
+  get(k){ try{ return localStorage.getItem(PREF + k); }catch(e){ return k in MEM ? MEM[k] : null; } },
+  set(k, v){ try{ localStorage.setItem(PREF + k, v); }catch(e){ MEM[k] = v; } },
+  del(k){ try{ localStorage.removeItem(PREF + k); }catch(e){} delete MEM[k]; },
+  getJSON(k, def){ try{ const v = this.get(k); return v == null ? def : JSON.parse(v); }catch(e){ return def; } },
+  setJSON(k, v){ try{ this.set(k, JSON.stringify(v)); }catch(e){} }
+};
+
+// ============================================================
+// CONEXIÓN (llamadas directas a las funciones RPC de Supabase)
+// ============================================================
+let GYM_ID = null, GYM = null;
+class SinConexion extends Error {}
+async function rpc(fn, params){
+  let res;
+  try{
+    res = await fetch(GYM.url.replace(/\/+$/, "") + "/rest/v1/rpc/" + fn, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", apikey: GYM.clave, Authorization: "Bearer " + GYM.clave },
+      body: JSON.stringify(params)
+    });
+  }catch(e){ throw new SinConexion(); }
+  const txt = await res.text();
+  if(!res.ok) throw new Error(fn + " " + res.status + ": " + txt.slice(0, 200));
+  return txt ? JSON.parse(txt) : null;
+}
+const PORTAL = {
+  abrir: (rut, pin) => rpc("socio_portal", { p_rut: rut, p_pin: pin }),
+  imagen: (rut, pin, id) => rpc("socio_imagen", { p_rut: rut, p_pin: pin, p_id: id }),
+  registrar: async (rut, pin, reg) => (await rpc("socio_registrar", { p_rut: rut, p_pin: pin, p_registro: reg })) === true,
+  qr: (rut, pin) => rpc("socio_qr", { p_rut: rut, p_pin: pin })
+};
+const gymConfigurado = g => !!(g && g.url && g.clave && !g.url.startsWith("@@"));
+
+// ============================================================
+// UTILIDADES
+// ============================================================
+const $ = id => document.getElementById(id);
+function toast(msg, err){
+  const t = $("toast");
+  t.textContent = msg; t.className = "toast show" + (err ? " err" : "");
+  clearTimeout(t._t); t._t = setTimeout(() => t.className = "toast" + (err ? " err" : ""), 3000);
+}
+function normRut(v){ return String(v || "").replace(/[^0-9kK]/g, "").toUpperCase(); }
+function formatRut(v){
+  const s = normRut(v); if(s.length < 2) return s;
+  return s.slice(0, -1).replace(/\B(?=(\d{3})+(?!\d))/g, ".") + "-" + s.slice(-1);
+}
+function rutValido(v){
+  const s = normRut(v); if(s.length < 2) return false;
+  const body = s.slice(0, -1), dv = s.slice(-1);
+  if(!/^\d+$/.test(body)) return false;
+  let suma = 0, mul = 2;
+  for(let i = body.length - 1; i >= 0; i--){ suma += +body[i] * mul; mul = mul === 7 ? 2 : mul + 1; }
+  const r = 11 - (suma % 11);
+  return (r === 11 ? "0" : r === 10 ? "K" : String(r)) === dv;
+}
+const dos = n => String(n).padStart(2, "0");
+function hoyStr(){ const d = new Date(); return dos(d.getDate()) + "-" + dos(d.getMonth() + 1) + "-" + d.getFullYear(); }
+function horaStr(){ const d = new Date(); return dos(d.getHours()) + ":" + dos(d.getMinutes()); }
+function fechaNum(f){ const m = /^(\d{1,2})-(\d{1,2})-(\d{4})$/.exec(String(f || "").trim()); return m ? (+m[3]) * 10000 + (+m[2]) * 100 + (+m[1]) : 0; }
+function escapeHtml(s){ return String(s == null ? "" : s).replace(/[&<>"']/g, m => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m])); }
+const escapeAttr = escapeHtml;
+function numero(v){ const n = parseFloat(String(v == null ? "" : v).replace(",", ".")); return isFinite(n) ? n : 0; }
+function fmtKg(n){ return (Math.round(n * 2) / 2).toLocaleString("es-CL", { maximumFractionDigits: 1 }); }
+function cargarScript(src){
+  return new Promise((ok, mal) => { const s = document.createElement("script"); s.src = src; s.onload = ok; s.onerror = mal; document.head.appendChild(s); });
+}
+function proximaSesion(rutina, registros){
+  const n = rutina && rutina.sesiones ? rutina.sesiones.length : 0;
+  if(!n) return -1;
+  const ult = (registros || []).slice().sort((a, b) => String(b.id).localeCompare(String(a.id))).find(r => typeof r.sesionIdx === "number");
+  return ult ? (ult.sesionIdx + 1) % n : 0;
+}
+function estadoAcceso(p){
+  if(p.habilitado === false) return { ok:false, motivo:"Acceso suspendido. Acércate a la recepción del gimnasio." };
+  if(p.vigenteHasta && fechaNum(p.vigenteHasta) && fechaNum(p.vigenteHasta) < fechaNum(hoyStr())) return { ok:false, motivo:"Tu plan venció el " + p.vigenteHasta + "." };
+  return { ok:true };
+}
+
+// ============================================================
+// FIGURAS DE EJERCICIOS (las mismas de la app del gimnasio)
+// ============================================================
+const FIG_DATA = {"pie":[["h",24,8],["l",[[24,12],[24,28]]],["l",[[20,43],[24,28],[28,43]]],["l",[[19,26],[24,16],[29,26]]]],"sentadilla":[["t",[[6,16],[42,16]]],["r",4,11,4,10],["r",40,11,4,10],["h",24,9],["l",[[24,13],[24,27]]],["l",[[17,15],[19,20],[24,17],[29,20],[31,15]]],["l",[[15,43],[14,33],[24,27],[34,33],[33,43]]]],"zancada":[["h",22,8],["l",[[22,12],[22,27]]],["l",[[32,43],[32,33],[22,27],[17,36],[16,42],[9,43]]],["l",[[22,15],[24,25]]],["r",21,25,6,4]],"step":[["t",[[26,34],[42,34],[42,44],[26,44]]],["h",22,8],["l",[[22,12],[22,26]]],["l",[[31,34],[31,29],[22,26],[19,35],[17,43]]],["l",[[22,15],[20,25]]],["r",17,25,6,4]],"prensa":[["t",[[6,42],[11,18]]],["t",[[6,42],[20,42]]],["t",[[35,14],[42,34]]],["h",11,14],["l",[[12,19],[16,36]]],["l",[[16,36],[25,21],[37,25]]],["l",[[13,22],[19,31]]]],"ext_cuad":[["t",[[10,12],[10,34],[30,34]]],["h",16,8],["l",[[16,12],[16,30],[29,30],[41,25]]],["l",[[16,15],[22,26]]],["c",41,29,2.5]],"bisagra":[["h",37,13],["l",[[33,17],[19,26],[25,33],[24,43]]],["l",[[31,19],[30,32]]],["c",30,35,5]],"puente":[["t",[[4,28],[14,28]]],["t",[[6,28],[6,44]]],["h",8,22],["l",[[12,26],[27,20],[35,27],[36,43]]],["c",27,15,4.5]],"curl_femoral":[["t",[[4,34],[38,34]]],["t",[[10,34],[10,44]]],["t",[[32,34],[32,44]]],["h",7,26],["l",[[11,30],[27,30],[37,30],[37,18]]],["l",[[13,30],[8,34]]],["c",39,20,2.5]],"gemelos":[["t",[[18,41],[34,41],[34,44]]],["h",24,7],["l",[[24,11],[24,27],[24,37],[28,40]]],["l",[[24,14],[22,26]]],["t",[[34,32],[34,22]]],["t",[[31,25],[34,22],[37,25]]]],"press_banca":[["t",[[6,32],[38,32]]],["t",[[10,32],[10,42]]],["t",[[34,32],[34,42]]],["h",8,27],["l",[[12,29],[28,29],[36,22],[39,42]]],["l",[[15,29],[15,14]]],["c",15,11,4.5]],"flexion":[["t",[[4,44],[44,44]]],["h",9,26],["l",[[13,29],[43,41]]],["l",[[15,30],[15,43]]]],"fondos":[["t",[[8,24],[40,24]]],["t",[[10,24],[10,44]]],["t",[[38,24],[38,44]]],["h",24,8],["l",[[24,12],[24,28],[22,36],[28,40]]],["l",[[24,15],[17,20],[18,24]]]],"jalon":[["t",[[8,5],[40,5]]],["h",24,14],["l",[[24,18],[24,31]]],["l",[[14,6],[16,15],[24,20],[32,15],[34,6]]],["l",[[24,31],[33,32],[33,43]]]],"remo":[["t",[[41,22],[41,38]]],["t",[[23,25],[41,28]]],["h",15,9],["l",[[16,13],[18,31]]],["l",[[18,31],[38,31]]],["l",[[17,17],[10,22],[23,25]]]],"press_hombro":[["h",24,13],["l",[[24,17],[24,30]]],["l",[[20,43],[24,30],[28,43]]],["l",[[14,8],[14,18],[24,19],[34,18],[34,8]]],["r",10,5,8,4],["r",30,5,8,4]],"elev_lateral":[["h",24,10],["l",[[24,14],[24,29]]],["l",[[20,43],[24,29],[28,43]]],["l",[[9,18],[24,17],[39,18]]],["r",5,16,4,6],["r",39,16,4,6]],"curl":[["h",24,8],["l",[[24,12],[24,28]]],["l",[[20,43],[24,28],[28,43]]],["l",[[17,13],[18,25],[24,16],[30,26]]],["r",14,10,6,4],["r",28,26,4,6]],"triceps":[["t",[[30,4],[30,31]]],["c",30,5,2.2],["h",18,8],["l",[[18,12],[18,29]]],["l",[[15,43],[18,29],[21,43]]],["l",[[19,15],[21,25],[29,31]]]],"plancha":[["t",[[4,44],[44,44]]],["h",9,28],["l",[[13,31],[43,41]]],["l",[[14,32],[14,43],[21,43]]]],"plancha_lateral":[["t",[[4,44],[44,44]]],["h",9,24],["l",[[12,28],[43,41]]],["l",[[13,29],[13,43]]],["l",[[14,29],[16,14]]]],"crunch":[["t",[[4,44],[44,44]]],["h",11,30],["l",[[15,33],[27,42],[33,31],[40,42]]],["l",[[16,34],[11,26]]]],"bicho":[["t",[[4,44],[44,44]]],["h",8,39],["l",[[12,40],[29,40]]],["l",[[15,40],[15,25]]],["l",[[29,40],[29,28],[41,28]]]],"superman":[["t",[[4,44],[44,44]]],["h",10,34],["l",[[13,38],[32,39],[44,33]]],["l",[[14,37],[3,31]]]],"cuadrupedia":[["t",[[4,44],[44,44]]],["h",7,25],["l",[[11,28],[29,28]]],["l",[[13,28],[13,43]]],["l",[[29,28],[29,43]]],["l",[[11,28],[2,22]]],["l",[[29,28],[44,25]]]],"patada":[["t",[[16,4],[16,44]]],["h",26,8],["l",[[25,12],[25,28],[26,43]]],["l",[[25,28],[39,33]]],["l",[[25,16],[17,22]]]],"bicicleta":[["t",[[10,43],[42,43]]],["t",[[15,24],[23,24]]],["t",[[19,24],[24,40],[34,18],[39,18]]],["o",32,36,6],["h",32,7],["l",[[19,22],[29,12],[37,18]]],["l",[[19,22],[29,27],[25,36]]]],"correr":[["t",[[4,44],[44,44]]],["h",28,8],["l",[[27,12],[23,27]]],["l",[[17,17],[21,22],[26,16],[32,21],[35,17]]],["l",[[13,34],[19,35],[23,27],[30,33],[28,42]]]],"caminar":[["h",23,8],["l",[[23,12],[23,27]]],["l",[[17,42],[23,27],[30,42]]],["l",[[20,25],[23,15],[26,25]]],["r",16,25,5,7],["r",24,25,5,7]],"saltar":[["t",[[8,46],[40,46]]],["h",24,9],["l",[[24,13],[24,28]]],["l",[[15,6],[24,16],[33,6]]],["l",[[16,40],[24,28],[32,40]]]],"elongacion":[["t",[[4,44],[44,44]]],["h",33,22],["l",[[16,42],[29,27]]],["l",[[16,42],[42,42]]],["l",[[28,28],[41,38]]]]};
+const FIG_REGLAS = [
+  [/elongaci|isquio|flexores de cadera|movilidad/, "elongacion"],
+  [/gato|camello|toracic|bird dog/, "cuadrupedia"],
+  [/bici/, "bicicleta"],
+  [/remoergometro/, "remo"],
+  [/farmer|granjero/, "caminar"],
+  [/eliptica|trotadora|caminata|cardio|hiit|correr|trote/, "correr"],
+  [/cuerda|burpee|salto|jumping/, "saltar"],
+  [/swing|kettlebell/, "bisagra"],
+  [/thruster/, "press_hombro"],
+  [/plancha lateral/, "plancha_lateral"],
+  [/plancha|rueda abdominal/, "plancha"],
+  [/bicho muerto|dead bug/, "bicho"],
+  [/superman/, "superman"],
+  [/crunch|abdominal/, "crunch"],
+  [/talon|gemelo|pantorrilla/, "gemelos"],
+  [/femoral/, "curl_femoral"],
+  [/hip thrust|puente/, "puente"],
+  [/patada|abduccion|aduccion/, "patada"],
+  [/peso muerto|rumano/, "bisagra"],
+  [/prensa/, "prensa"],
+  [/cuadriceps/, "ext_cuad"],
+  [/step/, "step"],
+  [/zancada|bulgara|estocada|lunge/, "zancada"],
+  [/sentadilla|squat/, "sentadilla"],
+  [/jalon|dominada|pull-over|pull over/, "jalon"],
+  [/press banca|press de pecho|press inclinado|apertura|pecho/, "press_banca"],
+  [/flexion|push/, "flexion"],
+  [/fondos/, "fondos"],
+  [/remo|face pull|trx/, "remo"],
+  [/vuelos|lateral|cruce/, "elev_lateral"],
+  [/press militar|frontal|hombro|arnold/, "press_hombro"],
+  [/triceps|press frances/, "triceps"],
+  [/curl|biceps|martillo/, "curl"],
+  [/pallof/, "pie"]
+];
+const FIG_GRUPO = { cuadriceps:"sentadilla", posterior:"bisagra", pecho:"press_banca", espalda:"remo", hombro:"press_hombro",
+  brazos:"curl", core:"plancha", complejos:"saltar", cardio:"correr", movilidad:"elongacion" };
+function claveFigura(nombre, grupo){
+  const n = String(nombre || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
+  for(const [re, k] of FIG_REGLAS) if(re.test(n)) return k;
+  return FIG_GRUPO[grupo] || "pie";
+}
+function figuraEjercicio(nombre, grupo, clase){
+  const k = claveFigura(nombre, grupo);
+  const partes = (FIG_DATA[k] || FIG_DATA.pie).map(e => {
+    if(e[0] === "h") return '<circle cx="' + e[1] + '" cy="' + e[2] + '" r="3.6" fill="currentColor"/>';
+    if(e[0] === "l" || e[0] === "t"){
+      const pts = e[1].map(p => p.join(",")).join(" ");
+      return '<polyline points="' + pts + '" fill="none" stroke="currentColor" stroke-width="' + (e[0] === "l" ? 3.2 : 1.6) +
+        '" stroke-linecap="round" stroke-linejoin="round"' + (e[0] === "t" ? ' opacity=".5"' : '') + '/>';
+    }
+    if(e[0] === "o") return '<circle cx="' + e[1] + '" cy="' + e[2] + '" r="' + e[3] + '" fill="none" stroke="currentColor" stroke-width="1.6" opacity=".5"/>';
+    if(e[0] === "c") return '<circle cx="' + e[1] + '" cy="' + e[2] + '" r="' + e[3] + '" fill="currentColor" opacity=".65"/>';
+    if(e[0] === "r") return '<rect x="' + e[1] + '" y="' + e[2] + '" width="' + e[3] + '" height="' + e[4] + '" rx="1" fill="currentColor" opacity=".65"/>';
+    return "";
+  }).join("");
+  return '<svg class="' + (clase || "fig-ej") + '" viewBox="0 0 48 48" aria-hidden="true">' + partes + '</svg>';
+}
+
+// ============================================================
+// CAMPOS DE LA EVALUACIÓN (los mismos de la app del gimnasio)
+// ============================================================
+const EVAL_GRUPOS = [
+  { t:"Composición corporal", campos:[
+    ["fuente","Equipo / informe",""],
+    ["grasaPct","Grasa corporal","%"],
+    ["masaGrasa","Masa grasa","kg"],
+    ["masaMuscular","Masa muscular","kg"],
+    ["musculoEsq","Músculo esquelético","kg"],
+    ["masaOsea","Masa ósea","kg"],
+    ["proteina","Proteína","kg"],
+    ["agua","Agua corporal","kg"],
+    ["pesoSinGrasa","Peso sin grasa","kg"],
+    ["grasaSubcut","Grasa subcutánea","%"],
+    ["grasaVisceral","Grasa visceral","nivel"],
+    ["imc","IMC","kg/m²"],
+    ["bmr","Metabolismo basal","kcal"],
+    ["edadCorporal","Edad corporal","años"],
+    ["whr","Índice cintura/cadera",""],
+    ["puntaje","Puntuación corporal","/100"]
+  ]},
+  { t:"Perímetros", campos:[
+    ["abdomen","Abdomen","cm"],
+    ["cadera","Cadera","cm"]
+  ]},
+  { t:"Signos vitales", campos:[
+    ["presion","Presión arterial","mmHg"],
+    ["fcReposo","FC en reposo","lpm"],
+    ["saturacion","Saturación O₂","%"]
+  ]}
+];
+const EVAL_CAMPOS = EVAL_GRUPOS.reduce((a, g) => a.concat(g.campos), []);
+const EVAL_TEXTO = ["fuente", "presion"];   // no numéricos: sin diferencia vs. anterior
+const lleno = v => v != null && String(v).trim() !== "";
+function fmtValorEval(v, u){
+  if(!u || u === "nivel") return escapeHtml(v);
+  return escapeHtml(v) + (u === "/100" || u === "%" ? u : " " + u);
+}
+function difEval(k, v, prev){
+  if(EVAL_TEXTO.includes(k) || !lleno(prev) || !numero(v) || !numero(prev)) return "";
+  const d = Math.round((numero(v) - numero(prev)) * 10) / 10;
+  return '<span class="dl">(' + (d > 0 ? "+" : "") + d.toLocaleString("es-CL") + ')</span>';
+}
+
+// ============================================================
+// ESTADO DEL SOCIO
+// ============================================================
+let PT = null;            // { rut, pin, nombre, rutina, registros, controlRPE, evaluaciones, habilitado, vigenteHasta }
+let PT_OFFLINE = false;
+let ptSesionSel = 0, ptPestana = "sesion";
+let PT_HECHOS = {};
+const IMG_CACHE = {};
+
+const kCred = () => "cred:" + GYM_ID;
+const kCache = rut => "cache:" + GYM_ID + ":" + rut;
+const kPend = rut => "pend:" + GYM_ID + ":" + rut;
+const kHechos = () => "hechos:" + GYM_ID + ":" + (PT ? PT.rut : "") + ":" + hoyStr();
+
+function cargarHechos(){ PT_HECHOS = LOCAL.getJSON(kHechos(), {}); }
+function guardarHechos(){ LOCAL.setJSON(kHechos(), PT_HECHOS); }
+function pendientes(){ return PT ? LOCAL.getJSON(kPend(PT.rut), []) : []; }
+function registrosVisibles(){
+  const pend = pendientes().map(r => Object.assign({}, r, { pendiente: true }));
+  const ids = new Set(pend.map(r => r.id));
+  return pend.concat((PT.registros || []).filter(r => !ids.has(r.id)));
+}
+function aplicarDatos(d){
+  Object.assign(PT, { nombre: d.nombre, rutina: d.rutina, registros: d.registros || [], controlRPE: !!d.controlRPE,
+    evaluaciones: d.evaluaciones, habilitado: d.habilitado !== false, vigenteHasta: d.vigenteHasta || "" });
+}
+function guardarCache(d){ LOCAL.setJSON(kCache(PT.rut), { pinHash: hashPin(PT.pin), datos: d, guardado: Date.now() }); }
+function hashPin(p){ let h = 5381; for(const c of String(p) + "|" + GYM_ID) h = ((h << 5) + h + c.charCodeAt(0)) | 0; return h; }
+
+// ============================================================
+// PANTALLAS
+// ============================================================
+function mostrar(v){ ["vGym", "vLogin", "vSocio"].forEach(id => $(id).hidden = id !== v); window.scrollTo(0, 0); }
+
+function pantallaGimnasio(){
+  detenerQR();
+  $("listaGym").innerHTML = Object.entries(GIMNASIOS).map(([id, g]) => {
+    const ok = gymConfigurado(g);
+    return '<button class="gym-op" data-gym="' + id + '"' + (ok ? '' : ' disabled') + '>' +
+      '<span class="ini">' + escapeHtml(g.sigla) + '</span><span><span class="n">' + escapeHtml(g.nombre) + '</span><br>' +
+      '<span class="d">' + (ok ? 'Gimnasio' : 'Próximamente') + '</span></span></button>';
+  }).join("");
+  $("listaGym").querySelectorAll("[data-gym]").forEach(b => b.onclick = () => elegirGimnasio(b.dataset.gym));
+  mostrar("vGym");
+}
+function elegirGimnasio(id){
+  if(!GIMNASIOS[id] || !gymConfigurado(GIMNASIOS[id])) return;
+  GYM_ID = id; GYM = GIMNASIOS[id];
+  LOCAL.set("gym", id);
+  pantallaLogin();
+}
+function pantallaLogin(){
+  $("lgMarca").textContent = "Gimnasio · " + GYM.nombre;
+  $("ptPin").value = "";
+  $("btnCambiarGym").hidden = Object.values(GIMNASIOS).filter(gymConfigurado).length < 2;
+  renderInstalar();
+  mostrar("vLogin");
+  const cred = LOCAL.getJSON(kCred(), null) || (() => { try{ return JSON.parse(sessionStorage.getItem(PREF + kCred()) || "null"); }catch(e){ return null; } })();
+  if(cred && cred.rut && cred.pin){
+    $("ptRut").value = formatRut(cred.rut);
+    $("ptPin").value = cred.pin;
+    entrar(true);
+  }
+}
+
+// ============================================================
+// INGRESO
+// ============================================================
+async function entrar(automatico){
+  const rut = normRut($("ptRut").value), pin = $("ptPin").value.trim();
+  if(!rutValido(rut)){ if(!automatico) toast("RUT no válido.", true); return; }
+  if(!pin){ toast("Ingresa tu clave.", true); return; }
+  const btn = $("btnEntrar");
+  btn.disabled = true; btn.textContent = "Entrando…";
+  let datos = null, offline = false;
+  try{
+    datos = await PORTAL.abrir(rut, pin);
+    if(!datos){ toast("RUT o clave incorrectos.", true); olvidarCred(); return; }
+  }catch(e){
+    const c = LOCAL.getJSON("cache:" + GYM_ID + ":" + rut, null);
+    if(e instanceof SinConexion && c && c.pinHash === hashPin(pin)){ datos = c.datos; offline = true; }
+    else{ console.error(e); toast(e instanceof SinConexion ? "Sin conexión. Revisa tu internet e intenta de nuevo." : "No se pudo entrar. Intenta de nuevo.", true); return; }
+  }finally{ btn.disabled = false; btn.textContent = "Entrar"; }
+
+  PT = { rut, pin };
+  aplicarDatos(datos);
+  PT_OFFLINE = offline;
+  if(!offline) guardarCache(datos);
+  const cred = JSON.stringify({ rut, pin });
+  if($("ptRecordar").checked) LOCAL.set(kCred(), cred); else LOCAL.del(kCred());
+  try{ sessionStorage.setItem(PREF + kCred(), cred); }catch(e){}
+  cargarHechos();
+  ptSesionSel = Math.max(0, proximaSesion(PT.rutina, registrosVisibles()));
+  $("ptGym").textContent = GYM.nombre;
+  $("tabQR").hidden = !GYM.qr;
+  $("ptTabs").style.gridTemplateColumns = "repeat(" + (GYM.qr ? 4 : 3) + ",1fr)";
+  mostrar("vSocio");
+  renderInstalar();
+  mostrarPestana("sesion");
+  if(!offline) enviarPendientes();
+}
+function olvidarCred(){ LOCAL.del(kCred()); try{ sessionStorage.removeItem(PREF + kCred()); }catch(e){} }
+function salir(){
+  if(pendientes().length && !confirm("Tienes sesiones sin enviar (sin conexión). Si sales, se enviarán la próxima vez que entres desde este teléfono. ¿Salir?")) return;
+  detenerQR();
+  PT = null;
+  olvidarCred();
+  $("ptPin").value = "";
+  pantallaLogin();
+}
+
+// ============================================================
+// PESTAÑAS
+// ============================================================
+function mostrarPestana(cual){
+  if(cual === "qr" && !GYM.qr) cual = "sesion";
+  ptPestana = cual;
+  [["qr","tabQR","panQR"], ["sesion","tabSesion","panSesion"], ["eval","tabEval","panEval"], ["hist","tabHist","panHist"]].forEach(([k, t, p]) => {
+    $(t).setAttribute("aria-selected", k === cual);
+    $(p).hidden = k !== cual;
+  });
+  $("ptOffline").hidden = !PT_OFFLINE;
+  if(cual === "qr") iniciarQR(); else detenerQR();
+  if(cual === "sesion") renderSesion();
+  if(cual === "eval") renderEvaluacion();
+  if(cual === "hist") renderHistorial();
+  window.scrollTo({ top: 0 });
+}
+
+function renderCabecera(){
+  const r = PT.rutina || {};
+  $("ptNombre").textContent = (PT.nombre || "").split(" ")[0];
+  const meta = [];
+  if(r.vigenteDesde) meta.push("Rutina desde " + r.vigenteDesde);
+  if(r.proximaEvaluacion) meta.push("Próxima evaluación: " + r.proximaEvaluacion);
+  $("ptPlanMeta").textContent = meta.join(" · ");
+}
+
+// ---------- Mi sesión ----------
+function renderSesion(){
+  renderCabecera();
+  const r = PT.rutina || {}, sesiones = r.sesiones || [];
+  $("ptAviso").hidden = !PT.controlRPE;
+  const regs = registrosVisibles();
+  const chips = $("ptChips"), host = $("ptEjercicios"), btnFin = $("btnRegistrar");
+  const ult = regs.slice().sort((a, b) => String(b.id).localeCompare(String(a.id)))[0];
+  $("ptPie").textContent = ult ? "Última sesión realizada: " + ult.sesionNombre + " (" + ult.fecha + ")" : "";
+  if(!sesiones.length){
+    chips.innerHTML = ""; $("ptResumen").textContent = "";
+    host.innerHTML = '<div class="sv-vacio">Tu profesor aún no te asigna una rutina.<br>Se publicará aquí después de tu evaluación.</div>';
+    btnFin.hidden = true;
+    return;
+  }
+  btnFin.hidden = false;
+  if(ptSesionSel >= sesiones.length) ptSesionSel = 0;
+  const sugerida = proximaSesion(r, regs);
+  chips.innerHTML = sesiones.map((s, i) =>
+    '<button class="chip' + (i === ptSesionSel ? ' activo' : '') + '" role="tab" aria-selected="' + (i === ptSesionSel) + '" data-ses="' + i + '">' +
+    escapeHtml(String(s.nombre).split(/\s[—–-]\s/)[0]) + (i === sugerida ? '<span class="hoy" title="Te toca hoy">●</span>' : '') + '</button>'
+  ).join("");
+  chips.querySelectorAll("[data-ses]").forEach(b => b.onclick = () => { ptSesionSel = +b.dataset.ses; renderSesion(); window.scrollTo({ top: 0 }); });
+  const activo = chips.querySelector(".chip.activo");
+  if(activo && activo.scrollIntoView) activo.scrollIntoView({ inline: "center", block: "nearest" });
+
+  const ses = sesiones[ptSesionSel], ejs = ses.ejercicios || [];
+  const hechos = ejs.filter((_, e) => PT_HECHOS[ptSesionSel + ":" + e]).length;
+  $("ptResumen").innerHTML = '<div class="sv-ses-titulo">' + escapeHtml(ses.nombre) + '</div>' +
+    (ptSesionSel === sugerida ? '<strong>Hoy te toca esta sesión.</strong> ' : '') + ejs.length + ' ejercicio(s) · ' + hechos + ' hecho(s)';
+
+  host.innerHTML = ejs.map((ej, e) => {
+    const hecho = !!PT_HECHOS[ptSesionSel + ":" + e];
+    const pills = [];
+    if(ej.series || ej.reps) pills.push('<span class="sv-pill fuerte">' + escapeHtml(ej.series || "—") + ' × ' + escapeHtml(ej.reps || "—") + '</span>');
+    if(ej.kg) pills.push('<span class="sv-pill carga">' + escapeHtml(ej.kg) + ' kg</span>');
+    if(ej.descanso && ej.descanso !== "—") pills.push('<span class="sv-pill">Descanso ' + escapeHtml(ej.descanso) + '</span>');
+    return '<div class="sv-ej' + (hecho ? ' hecho' : '') + '">' +
+      '<div class="sv-fig">' + figuraEjercicio(ej.nombre) + '<div class="sv-num">' + (e + 1) + '</div></div>' +
+      '<div>' +
+        '<div class="sv-nombre">' + escapeHtml(ej.nombre || "(sin nombre)") + '</div>' +
+        (pills.length ? '<div class="sv-pills">' + pills.join("") + '</div>' : '') +
+        (ej.notas ? '<div class="sv-nota">' + escapeHtml(ej.notas) + '</div>' : '') +
+        (ej.tecnica ? '<div class="sv-nota">Técnica: ' + escapeHtml(ej.tecnica) + '</div>' : '') +
+        (ej.video && /^https?:\/\//i.test(ej.video) ? '<a class="sv-video" href="' + escapeAttr(ej.video) + '" target="_blank" rel="noopener">▶ Ver video de técnica</a>' : '') +
+      '</div>' +
+      '<button class="sv-check" data-hecho="' + e + '" aria-pressed="' + hecho + '" aria-label="' + (hecho ? 'Desmarcar ' : 'Marcar como hecho: ') + escapeAttr(ej.nombre || '') + '">✓</button>' +
+    '</div>';
+  }).join("") || '<div class="sv-vacio">Esta sesión no tiene ejercicios.</div>';
+  host.querySelectorAll("[data-hecho]").forEach(b => b.onclick = () => {
+    const k = ptSesionSel + ":" + b.dataset.hecho;
+    if(PT_HECHOS[k]) delete PT_HECHOS[k]; else PT_HECHOS[k] = true;
+    guardarHechos();
+    if(navigator.vibrate) try{ navigator.vibrate(12); }catch(e){}
+    renderSesion();
+  });
+}
+
+async function registrarSesion(){
+  if(!PT || !PT.rutina || !PT.rutina.sesiones) return;
+  const ses = PT.rutina.sesiones[ptSesionSel];
+  const items = (ses.ejercicios || []).map((ej, e) => ({ nombre: ej.nombre, hecho: !!PT_HECHOS[ptSesionSel + ":" + e], carga: "", reps: "", nota: "" }));
+  if(!items.some(i => i.hecho) && !confirm("No marcaste ningún ejercicio. ¿Registrar la sesión igual?")) return;
+  const reg = { id: "r" + Date.now(), fecha: hoyStr(), hora: horaStr(), sesionIdx: ptSesionSel, sesionNombre: ses.nombre, items, rpe: "", comentario: "" };
+  const btn = $("btnRegistrar");
+  btn.disabled = true;
+  let enviado = false;
+  try{
+    const ok = await PORTAL.registrar(PT.rut, PT.pin, reg);
+    if(!ok){ toast("No se pudo registrar: tu clave cambió. Vuelve a ingresar.", true); olvidarCred(); salir(); return; }
+    PT.registros.unshift(Object.assign({}, reg, { rut: PT.rut }));
+    enviado = true;
+  }catch(e){
+    if(!(e instanceof SinConexion)){ console.error(e); toast("No se pudo registrar. Intenta de nuevo.", true); return; }
+    LOCAL.setJSON(kPend(PT.rut), pendientes().concat([reg]));   // se envía al volver la señal
+  }finally{ btn.disabled = false; }
+  Object.keys(PT_HECHOS).filter(k => k.startsWith(ptSesionSel + ":")).forEach(k => delete PT_HECHOS[k]);
+  guardarHechos();
+  ptSesionSel = Math.max(0, proximaSesion(PT.rutina, registrosVisibles()));
+  renderSesion();
+  window.scrollTo({ top: 0, behavior: "smooth" });
+  toast(enviado ? "¡Sesión registrada! La próxima vez te toca " + PT.rutina.sesiones[ptSesionSel].nombre + "."
+                : "Sin señal: la sesión quedó guardada en tu teléfono y se enviará sola cuando vuelva la conexión.");
+}
+
+let ENVIANDO = false;
+async function enviarPendientes(){
+  if(!PT || ENVIANDO) return;
+  let pend = pendientes();
+  if(!pend.length) return;
+  ENVIANDO = true;
+  let enviados = 0;
+  try{
+    for(const reg of pend.slice()){
+      const ok = await PORTAL.registrar(PT.rut, PT.pin, reg);
+      if(!ok) break;
+      PT.registros.unshift(Object.assign({}, reg, { rut: PT.rut }));
+      pend = pend.filter(r => r.id !== reg.id);
+      LOCAL.setJSON(kPend(PT.rut), pend);
+      enviados++;
+    }
+  }catch(e){ if(!(e instanceof SinConexion)) console.error(e); }
+  finally{ ENVIANDO = false; }
+  if(enviados){
+    toast(enviados === 1 ? "Se envió la sesión que quedó guardada sin señal." : "Se enviaron " + enviados + " sesiones guardadas sin señal.");
+    if(ptPestana === "hist") renderHistorial();
+    if(ptPestana === "sesion") renderSesion();
+  }
+}
+
+// ---------- Evaluación ----------
+function bloqueEvaluacion(ev, anterior){
+  const dato = (k, v, unidad, prev) => {
+    if(!lleno(v)) return "";
+    let delta = "";
+    if(prev && numero(prev) && numero(v)){
+      const d = Math.round((numero(v) - numero(prev)) * 10) / 10;
+      delta = '<div class="delta">' + (d > 0 ? "+" : "") + d.toLocaleString("es-CL") + ' ' + unidad + ' vs. anterior</div>';
+    }
+    return '<div class="sv-dato"><div class="k">' + k + '</div><div class="v">' + escapeHtml(v) + ' <small>' + unidad + '</small></div>' + delta + '</div>';
+  };
+  const TILES = [["peso","Peso","kg"], ["grasaPct","Grasa corporal","%"], ["masaMuscular","Masa muscular","kg"], ["cintura","Cintura","cm"]];
+  const datos = TILES.map(([k, l, u]) => dato(l, ev[k], u, anterior && anterior[k])).join("");
+  const enTiles = TILES.map(t => t[0]);
+  const tablas = EVAL_GRUPOS.map(g => {
+    const filas = g.campos.filter(([k]) => k !== "fuente" && !enTiles.includes(k) && lleno(ev[k]));
+    if(!filas.length) return "";
+    return '<div class="sec">' + g.t + '</div><table><tbody>' + filas.map(([k, l, u]) =>
+      '<tr><td>' + escapeHtml(l) + '</td><td class="n">' + fmtValorEval(ev[k], u) + difEval(k, ev[k], anterior && anterior[k]) + '</td></tr>').join("") + '</tbody></table>';
+  }).join("");
+  const fuerza = (ev.fuerza || []).length
+    ? '<div class="sec">Test de fuerza</div><table><thead><tr><th>Ejercicio</th><th style="text-align:right">Test</th><th style="text-align:right">1RM est.</th></tr></thead><tbody>' +
+      ev.fuerza.map(f => '<tr><td>' + escapeHtml(f.ejercicio) + '</td><td class="n">' + escapeHtml(f.carga) + ' kg × ' + escapeHtml(f.reps) + '</td><td class="n">' + escapeHtml(fmtKg(numero(f.rm))) + ' kg</td></tr>').join("") +
+      '</tbody></table>' : "";
+  return (lleno(ev.fuente) ? '<div class="fuente">Informe: ' + escapeHtml(ev.fuente) + '</div>' : '') +
+    (datos ? '<div class="sv-datos">' + datos + '</div>' : '') + tablas + fuerza +
+    (ev.notas ? '<div class="sec">Observaciones del profesor</div><div class="notas">' + escapeHtml(ev.notas) + '</div>' : '') +
+    (ev.imagenId ? '<div class="sec">Informe</div><button class="sv-informe" data-img="' + escapeAttr(ev.imagenId) + '" data-fecha="' + escapeAttr(ev.fecha) + '">' +
+      '<img alt="Informe de la evaluación del ' + escapeAttr(ev.fecha) + '" data-thumb="' + escapeAttr(ev.imagenId) + '"><span>Toca para ver el informe completo</span></button>' : '');
+}
+async function cargarImagen(id){
+  if(IMG_CACHE[id]) return IMG_CACHE[id];
+  const v = await PORTAL.imagen(PT.rut, PT.pin, id);
+  if(v) IMG_CACHE[id] = v;
+  return v;
+}
+function renderEvaluacion(){
+  renderCabecera();
+  const host = $("panEval");
+  if(!Array.isArray(PT.evaluaciones)){ host.innerHTML = '<div class="sv-vacio">Tus evaluaciones estarán disponibles aquí muy pronto.</div>'; return; }
+  const evs = PT.evaluaciones.slice().sort((a, b) => fechaNum(b.fecha) - fechaNum(a.fecha));
+  if(!evs.length){ host.innerHTML = '<div class="sv-vacio">Aún no tienes evaluaciones registradas.<br>Tu profesor las publicará aquí.</div>'; return; }
+  const r = PT.rutina || {}, ult = evs[0];
+  let html = '<div class="sv-ev"><h3>Evaluación del ' + escapeHtml(ult.fecha) + '</h3><div class="sub">' +
+    (evs.length > 1 ? 'La más reciente' : 'Tu evaluación') + (r.evaluacionId === ult.id ? ' · tu rutina actual se basa en ella' : '') +
+    (r.proximaEvaluacion ? ' · próxima: ' + escapeHtml(r.proximaEvaluacion) : '') + '</div>' + bloqueEvaluacion(ult, evs[1]) + '</div>';
+  if(evs.length > 1){
+    html += '<div class="sv-resumen" style="margin-top:18px">Evaluaciones anteriores</div>';
+    evs.slice(1).forEach((ev, i) => { html += '<details class="sv-ev"><summary>' + escapeHtml(ev.fecha) + '</summary>' + bloqueEvaluacion(ev, evs[i + 2]) + '</details>'; });
+  }
+  host.innerHTML = html;
+  host.querySelectorAll("[data-img]").forEach(b => b.onclick = () => verImagen(b.dataset.img, "Informe del " + b.dataset.fecha));
+  const pintar = async img => {
+    if(img.src) return;
+    const span = img.closest(".sv-informe").querySelector("span");
+    try{ const src = await cargarImagen(img.dataset.thumb); if(src) img.src = src; else span.textContent = "Informe no disponible"; }
+    catch(e){ span.textContent = e instanceof SinConexion ? "El informe se ve con conexión a internet" : "No se pudo cargar el informe"; }
+  };
+  host.querySelectorAll("details.sv-ev").forEach(d => d.addEventListener("toggle", () => { if(d.open) d.querySelectorAll("img[data-thumb]").forEach(pintar); }));
+  host.querySelectorAll(".sv-ev:not(details) img[data-thumb]").forEach(pintar);
+}
+async function verImagen(id, titulo){
+  const visor = $("visor"), cont = $("visorCont");
+  cont.innerHTML = '<div class="cargando">Cargando informe…</div>';
+  visor.classList.add("abierto");
+  try{
+    const src = await cargarImagen(id);
+    cont.innerHTML = src ? '<img alt="' + escapeAttr(titulo) + '" src="' + src + '">' : '<div class="cargando">No se encontró el informe.</div>';
+  }catch(e){ cont.innerHTML = '<div class="cargando">' + (e instanceof SinConexion ? "Sin conexión. El informe se ve con internet." : "No se pudo cargar el informe.") + '</div>'; }
+}
+function cerrarVisor(){ $("visor").classList.remove("abierto"); $("visorCont").innerHTML = ""; }
+
+// ---------- Registro ----------
+function renderHistorial(){
+  renderCabecera();
+  const host = $("panHist");
+  const regs = registrosVisibles().sort((a, b) => String(b.id).localeCompare(String(a.id)));
+  if(!regs.length){
+    host.innerHTML = '<div class="sv-vacio">Aún no registras sesiones.<br>Al terminar tu entrenamiento, marca los ejercicios y pulsa <strong>Terminé esta sesión</strong> en <em>Mi sesión</em>.</div>';
+    return;
+  }
+  const vd = PT.rutina && PT.rutina.vigenteDesde ? fechaNum(PT.rutina.vigenteDesde) : 0;
+  const conRutina = vd ? regs.filter(r => fechaNum(r.fecha) >= vd).length : 0;
+  host.innerHTML = '<div class="sv-hist-res"><strong>' + regs.length + '</strong> sesión(es) registrada(s)' +
+    (vd ? ' · <strong>' + conRutina + '</strong> con tu rutina actual (desde ' + escapeHtml(PT.rutina.vigenteDesde) + ')' : '') + '</div>' +
+    regs.map((r, i) => {
+      const items = r.items || [], hechos = items.filter(x => x.hecho).length;
+      return '<details class="sv-reg"' + (i === 0 ? ' open' : '') + '><summary>' +
+        '<div><div class="f">' + escapeHtml(r.fecha) + (r.hora ? ' · ' + escapeHtml(r.hora) : '') + (r.pendiente ? '<span class="pend">Por enviar</span>' : '') + '</div>' +
+        '<div class="s">' + escapeHtml(r.sesionNombre || "Sesión") + '</div></div>' +
+        '<div class="c">' + hechos + '/' + items.length + ' ejercicios</div></summary>' +
+        '<ul>' + items.map(x => '<li class="' + (x.hecho ? 'si' : 'no') + '"><span class="m">' + (x.hecho ? '✓' : '–') + '</span><span>' +
+          escapeHtml(x.nombre || "") + (x.carga ? ' · ' + escapeHtml(x.carga) : '') + (x.reps ? ' × ' + escapeHtml(x.reps) : '') + '</span></li>').join("") + '</ul>' +
+        (r.rpe ? '<div class="com">Esfuerzo (RPE): ' + escapeHtml(r.rpe) + '</div>' : '') +
+        (r.comentario ? '<div class="com">«' + escapeHtml(r.comentario) + '»</div>' : '') +
+      '</details>';
+    }).join("");
+}
+
+// ---------- Mi QR (solo gimnasios con control de acceso) ----------
+let QR_TIMER = null, QR_TICK = null;
+function detenerQR(){ clearTimeout(QR_TIMER); clearInterval(QR_TICK); QR_TIMER = QR_TICK = null; }
+async function iniciarQR(){
+  detenerQR();
+  const host = $("panQR");
+  if(!PT || !GYM.qr) return;
+  const e = estadoAcceso(PT);
+  if(!e.ok){ host.innerHTML = '<div class="qr-bloqueo">' + escapeHtml(e.motivo) + '</div>'; return; }
+  if(!host.querySelector(".qr-card")){
+    host.innerHTML = '<div class="qr-card"><h3>Mi acceso</h3><div class="sub">Muestra este código a la cámara de la puerta</div>' +
+      '<div class="qr-box" id="qrBox"></div><div class="qr-barra"><i id="qrBarra"></i></div><div class="qr-nota" id="qrNota"></div></div>';
+  }
+  const nota = $("qrNota");
+  let r;
+  try{
+    if(!window.qrcode) await cargarScript("https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js");
+    r = await PORTAL.qr(PT.rut, PT.pin);
+  }catch(err){
+    $("qrBox").innerHTML = "";
+    nota.textContent = "Necesitas conexión a internet para generar tu código. Reintentando…";
+    QR_TIMER = setTimeout(() => { if(ptPestana === "qr") iniciarQR(); }, 5000);
+    return;
+  }
+  if(!r || r.error){ host.innerHTML = '<div class="qr-bloqueo">' + escapeHtml((r && r.error) || "No se pudo generar tu código.") + '</div>'; return; }
+  const q = qrcode(0, "M"); q.addData(r.codigo); q.make();
+  $("qrBox").innerHTML = q.createSvgTag({ cellSize: 6, margin: 2, scalable: true });
+  nota.textContent = "El código cambia cada " + QR_ROTA_S + " segundos. Una captura de pantalla no sirve.";
+  let resta = QR_ROTA_S;
+  const barra = $("qrBarra");
+  barra.style.transition = "none"; barra.style.width = "100%"; void barra.offsetWidth; barra.style.transition = "";
+  QR_TICK = setInterval(() => { resta--; barra.style.width = Math.max(0, resta / QR_ROTA_S * 100) + "%"; }, 1000);
+  QR_TIMER = setTimeout(() => { if(!document.hidden && ptPestana === "qr") iniciarQR(); }, QR_ROTA_S * 1000);
+}
+
+// ============================================================
+// ACTUALIZACIÓN AUTOMÁTICA (al volver a la app y cada minuto)
+// ============================================================
+async function refrescar(){
+  if(!PT || document.hidden) return;
+  let d;
+  try{ d = await PORTAL.abrir(PT.rut, PT.pin); }
+  catch(e){ if(e instanceof SinConexion && !PT_OFFLINE){ PT_OFFLINE = true; $("ptOffline").hidden = false; } return; }
+  if(!d){ toast("Tu clave cambió. Vuelve a ingresar.", true); olvidarCred(); detenerQR(); PT = null; pantallaLogin(); return; }
+  const volvio = PT_OFFLINE;
+  PT_OFFLINE = false; $("ptOffline").hidden = true;
+  const cambio = JSON.stringify(d.rutina) !== JSON.stringify(PT.rutina);
+  aplicarDatos(d); guardarCache(d);
+  if(cambio){ PT_HECHOS = {}; guardarHechos(); ptSesionSel = Math.max(0, proximaSesion(PT.rutina, registrosVisibles())); toast("Tu profesor actualizó tu rutina."); }
+  await enviarPendientes();
+  if(ptPestana === "sesion") renderSesion();
+  else if(ptPestana === "hist") renderHistorial();
+  else if(ptPestana === "eval" && (cambio || volvio) && !document.querySelector("#panEval details[open]") && !$("visor").classList.contains("abierto")) renderEvaluacion();
+  else renderCabecera();
+}
+
+// ============================================================
+// INSTALAR EN EL TELÉFONO
+// ============================================================
+let PROMPT_INSTALAR = null;
+const esStandalone = () => window.matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
+const esIOS = () => /iphone|ipad|ipod/i.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
+function renderInstalar(){
+  ["slotInstalar", "slotInstalarLogin"].forEach(id => $(id).innerHTML = "");
+  if(esStandalone() || LOCAL.get("instalar-oculto") === hoyStr()) return;
+  if(!PROMPT_INSTALAR && !esIOS()) return;
+  const slot = $("vSocio").hidden ? $("slotInstalarLogin") : $("slotInstalar");
+  slot.innerHTML = '<div class="instalar"><img src="icon-192.png" alt=""><div><div class="t">Instala Mi rutina</div><div class="d">Ábrela desde tu pantalla de inicio, como una app.</div></div>' +
+    '<div class="acc"><button class="btn btn-primary" id="btnInstalar" style="padding:8px 14px">Instalar</button><button class="x" id="btnNoInstalar" aria-label="Ahora no">×</button></div></div>';
+  $("btnInstalar").onclick = async () => {
+    if(PROMPT_INSTALAR){
+      PROMPT_INSTALAR.prompt();
+      try{ await PROMPT_INSTALAR.userChoice; }catch(e){}
+      PROMPT_INSTALAR = null; renderInstalar();
+    } else $("hojaIOS").hidden = false;
+  };
+  $("btnNoInstalar").onclick = () => { LOCAL.set("instalar-oculto", hoyStr()); renderInstalar(); };
+}
+window.addEventListener("beforeinstallprompt", e => { e.preventDefault(); PROMPT_INSTALAR = e; renderInstalar(); });
+window.addEventListener("appinstalled", () => { PROMPT_INSTALAR = null; renderInstalar(); toast("App instalada. Búscala en tu pantalla de inicio."); });
+
+// ============================================================
+// INICIO
+// ============================================================
+function init(){
+  $("ptRut").addEventListener("input", e => { e.target.value = formatRut(e.target.value); });
+  $("btnEntrar").addEventListener("click", () => entrar(false));
+  $("ptPin").addEventListener("keydown", e => { if(e.key === "Enter") entrar(false); });
+  $("btnCambiarGym").addEventListener("click", () => { LOCAL.del("gym"); pantallaGimnasio(); });
+  $("btnSalir").addEventListener("click", salir);
+  $("btnRegistrar").addEventListener("click", registrarSesion);
+  document.querySelectorAll(".sv-tab").forEach(b => b.addEventListener("click", () => mostrarPestana(b.dataset.tab)));
+  $("visorCerrar").addEventListener("click", cerrarVisor);
+  $("visor").addEventListener("click", e => { if(e.target.id === "visor") cerrarVisor(); });
+  document.addEventListener("keydown", e => { if(e.key === "Escape") cerrarVisor(); });
+  $("hojaCerrar").addEventListener("click", () => $("hojaIOS").hidden = true);
+  document.addEventListener("visibilitychange", () => {
+    if(document.hidden) return;
+    if(PT && ptPestana === "qr") iniciarQR();
+    refrescar();
+  });
+  window.addEventListener("online", () => { refrescar(); });
+  setInterval(refrescar, 60000);
+
+  // Gimnasio: ?g=hotel en el enlace manda; si no, el último elegido; si hay uno solo, ese.
+  const param = new URLSearchParams(location.search).get("g");
+  const listos = Object.keys(GIMNASIOS).filter(id => gymConfigurado(GIMNASIOS[id]));
+  const elegido = [param, LOCAL.get("gym")].find(id => id && listos.includes(id)) || (listos.length === 1 ? listos[0] : null);
+  if(param) history.replaceState(null, "", location.pathname);
+  if(elegido) elegirGimnasio(elegido); else pantallaGimnasio();
+
+  if("serviceWorker" in navigator && (location.protocol === "https:" || location.hostname === "localhost")){
+    navigator.serviceWorker.register("sw.js").catch(e => console.warn("SW", e));
+  }
+}
+init();
+</script>
+</body>
+</html>
