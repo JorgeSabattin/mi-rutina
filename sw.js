@@ -3,7 +3,7 @@
 // - Siempre intenta traer la versión nueva primero; si no hay red, usa la guardada.
 // - Las llamadas a Supabase (datos del socio) nunca se guardan aquí.
 // Al publicar cambios grandes, sube el número de VERSION.
-const VERSION = "mi-rutina-v3";
+const VERSION = "mi-rutina-v4";
 const APP = ["./", "index.html", "manifest.webmanifest", "icon-192.png", "icon-512.png", "icon-maskable-512.png", "apple-touch-icon.png"];
 
 self.addEventListener("install", e => {

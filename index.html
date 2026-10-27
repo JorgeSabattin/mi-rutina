@@ -128,6 +128,9 @@
   .sv-pill.fuerte{background:var(--ink); color:#fff; font-family:'Space Mono',monospace; font-size:14px}
   .sv-pill.carga{background:var(--brass); color:#fff; font-family:'Space Mono',monospace; font-size:14px}
   .sv-nota{color:var(--muted); font-size:13px; margin-top:4px; line-height:1.4}
+  .sv-peso{display:flex; align-items:center; gap:8px; margin:10px 0 0; font-size:13.5px; font-weight:600; color:var(--muted); text-transform:none; letter-spacing:0; white-space:nowrap}
+  .sv-peso input{width:96px; padding:8px 10px; font-size:16px; text-align:right}
+  .sv-peso span.u{color:var(--ink)}
   .sv-video{display:inline-block; margin-top:8px; font-weight:700; font-size:13px; color:var(--teal-d)}
   .sv-check{width:48px; height:48px; border-radius:50%; border:2px solid var(--border); background:#fff; color:transparent;
     font-size:22px; font-weight:700; cursor:pointer; align-self:center}
@@ -221,7 +224,7 @@
       <button class="link" id="btnCambiarGym" type="button">Cambiar de gimnasio</button>
     </div>
     <p class="ayuda">¿No tienes clave o la olvidaste? Pídela en la recepción del gimnasio.</p>
-    <p class="ayuda" style="margin-top:6px; color:var(--faint)">Versión 22-10-2026 · v4</p>
+    <p class="ayuda" style="margin-top:6px; color:var(--faint)">Versión 27-10-2026 · v5</p>
   </section>
 
   <!-- ============ 3. SESIÓN DEL SOCIO ============ -->
@@ -250,7 +253,7 @@
         <div id="ptEjercicios"></div>
         <button class="btn btn-primary btn-block sv-fin" id="btnRegistrar">Terminé esta sesión</button>
         <p class="sv-pie" id="ptPie"></p>
-        <p class="sv-pie">Versión 22-10-2026 · v4</p>
+        <p class="sv-pie">Versión 27-10-2026 · v5</p>
       </div>
       <div id="panQR" role="tabpanel" aria-labelledby="tabQR" hidden></div>
       <div id="panEval" role="tabpanel" aria-labelledby="tabEval" hidden></div>
@@ -572,6 +575,7 @@ let PT = null;            // { rut, pin, nombre, rutina, registros, controlRPE, 
 let PT_OFFLINE = false;
 let ptSesionSel = 0, ptPestana = "sesion";
 let PT_HECHOS = {};
+let PT_PESOS = {};        // { "<sesion>:<ejercicio>": "12,5" } — peso que hizo hoy
 const IMG_CACHE = {};
 
 const kCred = () => "cred:" + GYM_ID;
@@ -579,8 +583,11 @@ const kCache = rut => "cache:" + GYM_ID + ":" + rut;
 const kPend = rut => "pend:" + GYM_ID + ":" + rut;
 const kHechos = () => "hechos:" + GYM_ID + ":" + (PT ? PT.rut : "") + ":" + hoyStr();
 
-function cargarHechos(){ PT_HECHOS = LOCAL.getJSON(kHechos(), {}); }
-function guardarHechos(){ LOCAL.setJSON(kHechos(), PT_HECHOS); }
+function cargarHechos(){ PT_HECHOS = LOCAL.getJSON(kHechos(), {}); PT_PESOS = LOCAL.getJSON("pesos:" + kHechos(), {}); }
+function guardarHechos(){ LOCAL.setJSON(kHechos(), PT_HECHOS); LOCAL.setJSON("pesos:" + kHechos(), PT_PESOS); }
+// Peso que hizo: lo que escribió, o el indicado por el profesor. "" si el ejercicio no lleva peso.
+const k_in = k => k in PT_PESOS;
+function pesoHecho(ej, k){ const v = k in PT_PESOS ? PT_PESOS[k] : (ej.kg || ""); return String(v).trim() && numero(v) > 0 ? fmtKg(numero(v)) : ""; }
 function pendientes(){ return PT ? LOCAL.getJSON(kPend(PT.rut), []) : []; }
 function registrosVisibles(){
   const pend = pendientes().map(r => Object.assign({}, r, { pendiente: true }));
@@ -748,10 +755,13 @@ function renderSesion(){
         (ej.notas ? '<div class="sv-nota">' + escapeHtml(ej.notas) + '</div>' : '') +
         (ej.tecnica ? '<div class="sv-nota">Técnica: ' + escapeHtml(ej.tecnica) + '</div>' : '') +
         (ej.video && /^https?:\/\//i.test(ej.video) ? '<a class="sv-video" href="' + escapeAttr(ej.video) + '" target="_blank" rel="noopener">▶ Ver video de técnica</a>' : '') +
+        (ej.kg ? '<label class="sv-peso">Peso que hice <input type="text" inputmode="decimal" data-peso="' + e + '" value="' +
+          escapeAttr(k_in(ptSesionSel + ":" + e) ? PT_PESOS[ptSesionSel + ":" + e] : ej.kg) + '" aria-label="Peso que hice en ' + escapeAttr(ej.nombre || "") + ', en kilos"><span class="u">kg</span></label>' : '') +
       '</div>' +
       '<button class="sv-check" data-hecho="' + e + '" aria-pressed="' + hecho + '" aria-label="' + (hecho ? 'Desmarcar ' : 'Marcar como hecho: ') + escapeAttr(ej.nombre || '') + '">✓</button>' +
     '</div>';
   }).join("") || '<div class="sv-vacio">Esta sesión no tiene ejercicios.</div>';
+  host.querySelectorAll("[data-peso]").forEach(inp => inp.oninput = () => { PT_PESOS[ptSesionSel + ":" + inp.dataset.peso] = inp.value.trim(); guardarHechos(); });
   host.querySelectorAll("[data-hecho]").forEach(b => b.onclick = () => {
     const k = ptSesionSel + ":" + b.dataset.hecho;
     if(PT_HECHOS[k]) delete PT_HECHOS[k]; else PT_HECHOS[k] = true;
@@ -764,7 +774,10 @@ function renderSesion(){
 async function registrarSesion(){
   if(!PT || !PT.rutina || !PT.rutina.sesiones) return;
   const ses = PT.rutina.sesiones[ptSesionSel];
-  const items = (ses.ejercicios || []).map((ej, e) => ({ nombre: ej.nombre, hecho: !!PT_HECHOS[ptSesionSel + ":" + e], carga: "", reps: "", nota: "" }));
+  const items = (ses.ejercicios || []).map((ej, e) => {
+    const k = ptSesionSel + ":" + e, hecho = !!PT_HECHOS[k], kg = hecho && ej.kg ? pesoHecho(ej, k) : "";
+    return { nombre: ej.nombre, hecho, carga: kg ? kg + " kg" : "", reps: "", nota: "" };
+  });
   if(!items.some(i => i.hecho) && !confirm("No marcaste ningún ejercicio. ¿Registrar la sesión igual?")) return;
   const reg = { id: "r" + Date.now(), fecha: hoyStr(), hora: horaStr(), sesionIdx: ptSesionSel, sesionNombre: ses.nombre, items, rpe: "", comentario: "" };
   const btn = $("btnRegistrar");
@@ -780,6 +793,7 @@ async function registrarSesion(){
     LOCAL.setJSON(kPend(PT.rut), pendientes().concat([reg]));   // se envía al volver la señal
   }finally{ btn.disabled = false; }
   Object.keys(PT_HECHOS).filter(k => k.startsWith(ptSesionSel + ":")).forEach(k => delete PT_HECHOS[k]);
+  Object.keys(PT_PESOS).filter(k => k.startsWith(ptSesionSel + ":")).forEach(k => delete PT_PESOS[k]);
   guardarHechos();
   ptSesionSel = Math.max(0, proximaSesion(PT.rutina, registrosVisibles()));
   renderSesion();
@@ -960,7 +974,7 @@ async function refrescar(){
   PT_OFFLINE = false; $("ptOffline").hidden = true;
   const cambio = JSON.stringify(d.rutina) !== JSON.stringify(PT.rutina);
   aplicarDatos(d); guardarCache(d);
-  if(cambio){ PT_HECHOS = {}; guardarHechos(); ptSesionSel = Math.max(0, proximaSesion(PT.rutina, registrosVisibles())); toast("Tu profesor actualizó tu rutina."); }
+  if(cambio){ PT_HECHOS = {}; PT_PESOS = {}; guardarHechos(); ptSesionSel = Math.max(0, proximaSesion(PT.rutina, registrosVisibles())); toast("Tu profesor actualizó tu rutina."); }
   await enviarPendientes();
   if(ptPestana === "sesion") renderSesion();
   else if(ptPestana === "hist") renderHistorial();
